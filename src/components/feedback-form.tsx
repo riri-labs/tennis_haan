@@ -80,7 +80,6 @@ export function FeedbackForm({ title }: { title: string }) {
       const blob = await upload(video.file.name, video.file, {
         access: "public",
         handleUploadUrl: "/api/blob-upload",
-        multipart: true,
         onUploadProgress: ({ percentage }) => setUploadProgress(percentage),
       });
 
