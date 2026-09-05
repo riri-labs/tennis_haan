@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { getSiteContent } from "@/lib/site-config";
 
@@ -28,20 +29,36 @@ export default async function HomePage() {
   return (
     <div>
       <section className="mx-auto max-w-content px-6 pb-20 pt-16 sm:px-10 sm:pb-28 sm:pt-24">
-        <span className="inline-block rounded-full bg-court/10 px-4 py-1.5 text-sm font-bold text-court">
-          {content.name}
-        </span>
-        <h1 className="mt-6 max-w-2xl font-display text-5xl leading-[1.1] tracking-tight text-ink sm:text-6xl">
-          {content.tagline}
-        </h1>
-        <p className="mt-6 max-w-lg text-lg leading-relaxed text-ink/60">
-          {content.description.split("\n").map((line, i) => (
-            <span key={i}>
-              {i > 0 && <br />}
-              {line}
+        <div className="flex flex-col-reverse items-center gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+          <div className="max-w-2xl">
+            <span className="inline-block rounded-full bg-court/10 px-4 py-1.5 text-sm font-bold text-court">
+              {content.name}
             </span>
-          ))}
-        </p>
+            <h1 className="mt-6 font-display text-5xl leading-[1.1] tracking-tight text-ink sm:text-6xl">
+              {content.tagline}
+            </h1>
+            <p className="mt-6 max-w-lg text-lg leading-relaxed text-ink/60">
+              {content.description.split("\n").map((line, i) => (
+                <span key={i}>
+                  {i > 0 && <br />}
+                  {line}
+                </span>
+              ))}
+            </p>
+          </div>
+
+          <div className="relative w-40 shrink-0 sm:w-52 lg:w-64">
+            <div className="absolute inset-0 -z-10 rounded-full bg-court/10 blur-2xl" />
+            <Image
+              src="/images/hero-mascot.png"
+              alt="테니스 치는 캐릭터 일러스트"
+              width={540}
+              height={720}
+              priority
+              className="w-full rotate-3 drop-shadow-xl transition duration-300 hover:-rotate-2 hover:scale-105"
+            />
+          </div>
+        </div>
       </section>
 
       <section className="mx-auto max-w-content px-6 pb-24 sm:px-10">
