@@ -228,7 +228,10 @@ export async function POST(req: NextRequest) {
     // 브라우저가 Vercel Blob에 직접 올려둔 영상을 서버에서 내려받아 Gemini로 넘긴다.
     // (Vercel 함수 자체의 요청 본문 4.5MB 제한을 피하기 위한 구조 — 이 fetch는
     // 함수 간 일반 아웃바운드 호출이라 그 제한을 받지 않는다.)
-    const videoRes = await fetch(videoUrl);
+    // 스토어가 private이라 다운로드에도 인증 헤더가 필요하다.
+    const videoRes = await fetch(videoUrl, {
+      headers: { authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
+    });
     if (!videoRes.ok) {
       throw new Error("업로드된 영상을 불러오지 못했습니다. 다시 시도해주세요.");
     }
