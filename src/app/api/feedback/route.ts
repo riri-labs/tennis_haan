@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
+import { del } from "@vercel/blob";
 
 export const runtime = "nodejs";
 
@@ -200,9 +201,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let form: FormData;
+  let body: { videoUrl?: string; description?: string; level?: string };
   try {
-    form = await req.formData();
+    body = await req.json();
   } catch {
     return NextResponse.json(
       { error: "요청 본문을 해석할 수 없습니다." },
@@ -210,27 +211,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const video = form.get("video");
-  const description = ((form.get("description") as string) ?? "").trim();
-  const level = (form.get("level") as string) ?? "중급";
+  const { videoUrl } = body;
+  const description = (body.description ?? "").trim();
+  const level = body.level ?? "중급";
 
-  if (!(video instanceof Blob) || video.size === 0) {
+  if (!videoUrl) {
     return NextResponse.json(
       { error: "영상 파일을 올려주세요." },
-      { status: 400 },
-    );
-  }
-  if (!video.type.startsWith("video/")) {
-    return NextResponse.json(
-      { error: "영상 파일만 업로드할 수 있습니다." },
-      { status: 400 },
-    );
-  }
-  if (video.size > MAX_VIDEO_BYTES) {
-    return NextResponse.json(
-      {
-        error: `영상 용량이 너무 큽니다 (최대 ${Math.floor(MAX_VIDEO_BYTES / 1024 / 1024)}MB). 더 짧거나 압축된 영상으로 시도해주세요.`,
-      },
       { status: 400 },
     );
   }
@@ -238,10 +225,25 @@ export async function POST(req: NextRequest) {
   const ai = new GoogleGenAI({ apiKey });
 
   try {
-    const buffer = Buffer.from(await video.arrayBuffer());
+    // 브라우저가 Vercel Blob에 직접 올려둔 영상을 서버에서 내려받아 Gemini로 넘긴다.
+    // (Vercel 함수 자체의 요청 본문 4.5MB 제한을 피하기 위한 구조 — 이 fetch는
+    // 함수 간 일반 아웃바운드 호출이라 그 제한을 받지 않는다.)
+    const videoRes = await fetch(videoUrl);
+    if (!videoRes.ok) {
+      throw new Error("업로드된 영상을 불러오지 못했습니다. 다시 시도해주세요.");
+    }
+    const videoType = videoRes.headers.get("content-type") ?? "video/mp4";
+    const buffer = Buffer.from(await videoRes.arrayBuffer());
+
+    if (buffer.byteLength > MAX_VIDEO_BYTES) {
+      throw new Error(
+        `영상 용량이 너무 큽니다 (최대 ${Math.floor(MAX_VIDEO_BYTES / 1024 / 1024)}MB). 더 짧거나 압축된 영상으로 시도해주세요.`,
+      );
+    }
+
     const uploaded = await ai.files.upload({
-      file: new Blob([buffer], { type: video.type }),
-      config: { mimeType: video.type },
+      file: new Blob([buffer], { type: videoType }),
+      config: { mimeType: videoType },
     });
 
     if (!uploaded.name) {
@@ -278,9 +280,11 @@ export async function POST(req: NextRequest) {
     const feedback = response.text ?? "피드백을 생성하지 못했습니다.";
 
     ai.files.delete({ name: uploaded.name }).catch(() => {});
+    del(videoUrl).catch(() => {});
 
     return NextResponse.json({ feedback });
   } catch (error) {
+    del(videoUrl).catch(() => {});
     const message =
       error instanceof Error ? error.message : "AI 피드백 생성 중 오류가 발생했습니다.";
     return NextResponse.json({ error: message }, { status: 502 });

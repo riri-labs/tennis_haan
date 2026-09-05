@@ -1,10 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { upload } from "@vercel/blob/client";
 import { FeedbackModal } from "@/components/feedback-modal";
 
 const LEVELS = ["입문", "초급", "중급", "상급"] as const;
 const MAX_VIDEO_MB = 100;
+
+type Status = "idle" | "uploading" | "analyzing" | "error";
 
 export function FeedbackForm({ title }: { title: string }) {
   const [video, setVideo] = useState<{ file: File; previewUrl: string } | null>(
@@ -12,7 +15,8 @@ export function FeedbackForm({ title }: { title: string }) {
   );
   const [description, setDescription] = useState("");
   const [level, setLevel] = useState<(typeof LEVELS)[number]>("중급");
-  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [status, setStatus] = useState<Status>("idle");
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -67,19 +71,24 @@ export function FeedbackForm({ title }: { title: string }) {
       return;
     }
 
-    setStatus("loading");
+    setStatus("uploading");
+    setUploadProgress(0);
     setErrorMessage("");
     setFeedback(null);
 
     try {
-      const formData = new FormData();
-      formData.append("video", video.file);
-      formData.append("description", description);
-      formData.append("level", level);
+      const blob = await upload(video.file.name, video.file, {
+        access: "public",
+        handleUploadUrl: "/api/blob-upload",
+        onUploadProgress: ({ percentage }) => setUploadProgress(percentage),
+      });
+
+      setStatus("analyzing");
 
       const res = await fetch("/api/feedback", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videoUrl: blob.url, description, level }),
       });
 
       const json = await res.json();
@@ -201,12 +210,14 @@ export function FeedbackForm({ title }: { title: string }) {
           <div className="mt-6 flex items-center gap-4">
             <button
               type="submit"
-              disabled={status === "loading"}
+              disabled={status === "uploading" || status === "analyzing"}
               className="rounded-full bg-court px-8 py-4 text-sm font-bold text-paper transition hover:brightness-90 disabled:opacity-50"
             >
-              {status === "loading"
-                ? "영상 분석 중… (최대 1~2분)"
-                : "피드백 받기"}
+              {status === "uploading"
+                ? `영상 업로드 중… ${uploadProgress}%`
+                : status === "analyzing"
+                  ? "영상 분석 중… (최대 1~2분)"
+                  : "피드백 받기"}
             </button>
 
             {feedback && !isModalOpen && (
