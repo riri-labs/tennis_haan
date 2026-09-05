@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-court: #20463a;
+}
+
+::selection {
+  background-color: var(--color-court);
+  color: #fafaf6;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #fafaf6;
+  color: #181b18;
+  word-break: keep-all;
+}
+
+.font-display {
+  font-weight: 800;
+}

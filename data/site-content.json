@@ -1,0 +1,11 @@
+{
+  "name": "HAAN TENNIS LAB",
+  "tagline": "Analyze. Train. Play.",
+  "description": "테니스 코칭 영상 아카이브, 부산 코트 예약 정보,\n그리고 AI 피드백까지 — 한 명의 테니스 코치가 정리한 개인 코칭 노트입니다.",
+  "navLabels": {
+    "videos": "코칭 영상",
+    "courts": "코트 & 예약",
+    "feedback": "AI 피드백"
+  },
+  "brandColor": "#20463A"
+}
